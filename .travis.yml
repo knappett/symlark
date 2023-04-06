@@ -1,0 +1,44 @@
+# Config file for automatic testing at travis-ci.com
+language: python
+
+jobs:
+  fast_finish: true
+  include:
+    - env:
+        - TOXENV=docs
+        - READTHEDOCS=true
+      name: "Documentation"
+      python: 3.7
+      addons:
+        apt:
+            packages:
+                - pandoc
+    - env: TOXENV=black
+      name: "Black and flake8 compliance"
+      python: 3.7
+    - env: TOXENV=py37
+      name: "Python3.7 (Linux)"
+      python: 3.7
+
+
+before_install:
+    - printenv
+    - pip install --upgrade pip
+
+install:
+    - pip install -U tox-travis
+
+script: tox -e $TOXENV
+
+deploy:
+  provider: pypi
+  distributions: sdist bdist_wheel
+  skip_cleanup: true
+  skip_existing: true
+  user: knappett
+  password:
+    secure: PLEASE_REPLACE_ME
+  on:
+    tags: true
+    repo: knappett/symlark
+    python: 3.7
