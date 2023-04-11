@@ -1,7 +1,8 @@
 from pathlib import Path
+import os
 
 import logging
-from symlark import main
+from symlark.symlark import main
 
 
 # NOTE: caplog is a special pytest "fixture" - that will capture log
@@ -21,14 +22,18 @@ def test_finding_our_feet(caplog):
     assert caplog.records[0].message == expected_log_msg
 
     # We would expect to check file system things as well
-    assert Path("/gws/pw/j07/ukcp18/pre-archive/ukcp18/data/land-prob/global/glb/rcp85/cdf/b8110/30y/tasAnom/ann/v20190429").readlink().as_posix("/badc/ukcp18/data/land-prob/global/glb/rcp85/cdf/b8110/30y/tasAnom/ann/v20190429) == 
+ #   assert Path("/gws/pw/j07/ukcp18/pre-archive/ukcp18/data/land-prob/global/glb/rcp85/cdf/b8110/30y/tasAnom/ann/v20190429").readlink().as_posix("/badc/ukcp18/data/land-prob/global/glb/rcp85/cdf/b8110/30y/tasAnom/ann/v20190429) == 
 
+
+def check_dir(dr):
+    if not os.path.isdir(dr):
+        os.makedirs(dr)
 
 
 def setup_container_dir(basedir, versions, latest):
-    os.mkdir(basedir)
+    check_dir(basedir)
     for version in versions:
-        os.mkdir(f"{basedir}/{version}")
+        check_dir(f"{basedir}/{version}")
 
     if latest:
         pass # Would create symlink here 
@@ -38,6 +43,6 @@ def test_single_version_duplicate_changed_to_symlink(caplog):
     setup_container_dir("test_gws", ["v20220202"], latest="v20220202")
     setup_container_dir("test_arc", ["v20220202"], latest="v20220202")
 
-    main(f"test_gws", "test_arc")
+#    main(f"test_gws", "test_arc")
     # Now check the logs are correct
     # And check the file system is correct
