@@ -30,7 +30,7 @@ def check_dir(dr):
         os.makedirs(dr)
 
 
-def setup_container_dir(basedir, versions, latest):
+def setup_container_dir(basedir, versions, latest, arc_links=None):
     check_dir(basedir)
     for version in versions:
         check_dir(f"{basedir}/{version}")
@@ -38,11 +38,29 @@ def setup_container_dir(basedir, versions, latest):
     if latest:
         pass # Would create symlink here 
 
+    if arc_links:
+        pass # Link to archive equivalent
+
 
 def test_single_version_duplicate_changed_to_symlink(caplog):
     setup_container_dir("test_gws", ["v20220202"], latest="v20220202")
     setup_container_dir("test_arc", ["v20220202"], latest="v20220202")
 
 #    main(f"test_gws", "test_arc")
+    # Now check the logs are correct
+    # And check the file system is correct
+
+
+
+def test_single_version_already_correctly_symlinked(caplog):
+    setup_container_dir("test_arc", ["v20220203"], latest="v20220203")
+    setup_container_dir("test_gws", [], latest="v20220203", arc_links={
+        "v20220203": "test_arc/v20220203"
+    })
+
+
+    main(f"test_gws", "test_arc")
+    # Assert log says: f"[INFO] Already linked: {gws_dir}"
+
     # Now check the logs are correct
     # And check the file system is correct

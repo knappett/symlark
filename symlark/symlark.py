@@ -126,7 +126,7 @@ def main(bd1: str, bd2: str) -> None:
         arc_dir = ArchiveDir(d1.replace(bd1, bd2))
 
         if gws_dir.as_path.is_symlink() and gws_dir.as_path.readlink().as_posix() == arc_dir:
-            print(f"[INFO] Already linked: {gws_dir}")
+            logger.info(f"[INFO] Already linked: {gws_dir}")
             continue
 
         for gws_version in reversed(gws_versions):
