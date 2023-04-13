@@ -111,7 +111,7 @@ class ArchiveDir:
         
         if not self.latest:
             errs += 1
-            print(f"[ERROR] No latest link in container directory: {self.dr}")
+            logger.error(f"[ERROR] No latest link in container directory: {self.dr}")
         elif self._latest_path.readlink().as_posix() != self.versions[-1]:
             errs += 1
             print(f"[ERROR] latest link is not pointing to most recent version in: {self.dr}")
@@ -125,6 +125,20 @@ def main(bd1: str, bd2: str) -> None:
         gws_versions = find_versions(gws_dir.dr)
         arc_dir = ArchiveDir(d1.replace(bd1, bd2))
 
+        print(f"ArchiveDir: {arc_dir.latest}")
+        print(type(arc_dir.latest))
+        print(isinstance(arc_dir.latest,bool))  # Checks if the ArchiveDir has set arc_dir.latest to booleen 'False' because it doesn't exist
+        print(arc_dir.latest == False)
+
+        import pdb ; pdb.set_trace() 
+
+        #if type(arc_dir.latest) == 'bool':
+        if arc_dir.latest == False:
+            # 'latest' link doesn't exist in the archive
+            logger.warning(f"[ACTION] Create latest link in the archive")
+            continue
+        else: print('Not working...')
+
         if gws_dir.as_path.is_symlink() and gws_dir.as_path.readlink().as_posix() == arc_dir:
             logger.info(f"[INFO] Already linked: {gws_dir}")
             continue
@@ -135,7 +149,7 @@ def main(bd1: str, bd2: str) -> None:
             print(f"              and: {av_path}")
 
             if gws_version < arc_dir.latest:
-                print(f"[ACTION] Delete old version in GWS: {gv_path}")
+                logger.warning(f"[ACTION] Delete old version in GWS: {gv_path}")
             elif gws_version == arc_dir.latest:
                 if dirs_match(gv_path, av_path, bd1, bd2):
                     logger.warning(f"[ACTION] Delete {gv_path} and symlink to: {av_path}")
