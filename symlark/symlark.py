@@ -112,11 +112,17 @@ class ArchiveDir:
         if not self.latest:
             errs += 1
             logger.error(f"[ERROR] No latest link in container directory: {self.dr}")
+            print('ERROR MESSAGE!!')
+            # Really we want to exit at this point and print the above error
+            #import pdb ; pdb.set_trace()
         elif self._latest_path.readlink().as_posix() != self.versions[-1]:
             errs += 1
             print(f"[ERROR] latest link is not pointing to most recent version in: {self.dr}")
 
         self.valid = True if errs == 0 else False
+        print(self.valid)
+
+        #import pdb ; pdb.set_trace() 
 
 
 def main(bd1: str, bd2: str) -> None:
@@ -127,17 +133,19 @@ def main(bd1: str, bd2: str) -> None:
 
         print(f"ArchiveDir: {arc_dir.latest}")
         print(type(arc_dir.latest))
-        print(isinstance(arc_dir.latest,bool))  # Checks if the ArchiveDir has set arc_dir.latest to booleen 'False' because it doesn't exist
-        print(arc_dir.latest == False)
+        print(isinstance(arc_dir.latest,bool))    # Checks if the ArchiveDir has set arc_dir.latest to booleen 'False' because it doesn't exist
+        print(arc_dir.latest == False)    # Is it best to use this, or the line above?
 
-        import pdb ; pdb.set_trace() 
+        if arc_dir.valid == False:  # Ideally, this would be addressed in line 115, after line 'logger.error(f"[ERROR] No latest link in container directory: {self.dr}")'
+            continue
+        #import pdb ; pdb.set_trace() 
 
         #if type(arc_dir.latest) == 'bool':
-        if arc_dir.latest == False:
+        #if arc_dir.latest == False:
             # 'latest' link doesn't exist in the archive
-            logger.warning(f"[ACTION] Create latest link in the archive")
-            continue
-        else: print('Not working...')
+        #    logger.warning(f"[ACTION] Create latest link in the archive")
+        #    continue
+        #else: print('Not working...')
 
         if gws_dir.as_path.is_symlink() and gws_dir.as_path.readlink().as_posix() == arc_dir:
             logger.info(f"[INFO] Already linked: {gws_dir}")

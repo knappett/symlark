@@ -29,6 +29,9 @@ def check_dir(dr):
     if not os.path.isdir(dr):
         os.makedirs(dr)
 
+def check_link(ph,link):
+    if not os.path.islink(link):
+        os.symlink(ph,link)
 
 def setup_container_dir(basedir, versions, latest, arc_links=None):
     check_dir(basedir)
@@ -36,6 +39,9 @@ def setup_container_dir(basedir, versions, latest, arc_links=None):
         check_dir(f"{basedir}/{version}")
 
     if latest:
+        # path: latest (e.g. "v20220202")
+        # link: 'latest'
+        check_link(latest,f"{basedir}/latest")
         pass # Would create symlink here 
 
     if arc_links:
