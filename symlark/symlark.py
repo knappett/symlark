@@ -9,11 +9,26 @@ import os, glob, re
 import hashlib
 from pathlib import Path
 
+import sys
 import logging
 
 # Set up module-level logger
 logging.basicConfig()
 logger = logging.getLogger(__name__)
+
+
+# Create a new handler for logging (to standard output)
+handler = logging.StreamHandler(sys.stdout)
+
+# Optionally - set the logging level on the handler (i.e. show all log messages at this level and above)
+handler.setLevel(logging.DEBUG)
+
+# Optionally - decide on the format of each log message, and attach it to the handler
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+handler.setFormatter(formatter)
+
+# Connect this new handler to your existing `logger` object
+logger.addHandler(handler)
 
 
 def nested_list(d: str, remove_base=False) -> list:
@@ -104,20 +119,19 @@ class ArchiveDir:
         errs = 0
         if not os.path.isdir(self.dr):
             errs += 1
-            print(f"[ERROR] Archive container directory is missing: {self.dr}")
+            logger.error(f"[ERROR] Archive container directory is missing: {self.dr}")
         elif not self.versions:
             errs += 1
-            print(f"[ERROR] No version directories found in container directory: {self.dr}")
+            logger.error(f"[ERROR] No version directories found in container directory: {self.dr}")
         
         if not self.latest:
             errs += 1
             logger.error(f"[ERROR] No latest link in container directory: {self.dr}")
             print('ERROR MESSAGE!!')
-            # Really we want to exit at this point and print the above error
             #import pdb ; pdb.set_trace()
         elif self._latest_path.readlink().as_posix() != self.versions[-1]:
             errs += 1
-            print(f"[ERROR] latest link is not pointing to most recent version in: {self.dr}")
+            logger.error(f"[ERROR] latest link is not pointing to most recent version in: {self.dr}")
 
         self.valid = True if errs == 0 else False
         print(self.valid)

@@ -34,15 +34,20 @@ def check_link(ph,link):
         os.symlink(ph,link)
 
 def setup_container_dir(basedir, versions, latest, arc_links=None):
+    # basedir:   Base directory for GWS or archive e.g. "test_gws"
+    # versions:  Array of data versions e.g. ["v20220202"]
+    # latest:    Definition of latest directory e.g. latest="v20220202"
+    # arc_links: Link to archive
+    
     check_dir(basedir)
     for version in versions:
         check_dir(f"{basedir}/{version}")
 
+    # If 'latest' argument specified, check whether the link exists. If not, create it.
     if latest:
-        # path: latest (e.g. "v20220202")
-        # link: 'latest'
+        # Call check_link with (path,link) to create 'latest' symlink
         check_link(latest,f"{basedir}/latest")
-        pass # Would create symlink here 
+        pass
 
     if arc_links:
         pass # Link to archive equivalent
@@ -51,11 +56,23 @@ def setup_container_dir(basedir, versions, latest, arc_links=None):
 def test_single_version_duplicate_changed_to_symlink(caplog):
     setup_container_dir("test_gws", ["v20220202"], latest="v20220202")
     setup_container_dir("test_arc", ["v20220202"], latest="v20220202")
+    
+    import pdb ; pdb.set_trace() 
+    
+    main(f"test_gws", "test_arc")
+    
+    
+    expected_log_msg = ("[ACTION] Delete "
+                        "test_gws/v20220202 "
+                        "and symlink to: "
+                        "test_arc/v20220202")
 
-#    main(f"test_gws", "test_arc")
+    import pdb ; pdb.set_trace() 
+
+    assert len(caplog.records) == 1
+    assert caplog.records[0].message == expected_log_msg
     # Now check the logs are correct
     # And check the file system is correct
-
 
 
 def test_single_version_already_correctly_symlinked(caplog):
