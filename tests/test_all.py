@@ -4,6 +4,15 @@ import os
 import logging
 from symlark.symlark import main
 
+# To print a directory tree given a filepath
+def list_files(startpath):
+    for root, dirs, files in os.walk(startpath):
+        level = root.replace(startpath, '').count(os.sep)
+        indent = ' ' * 4 * (level)
+        print('{}{}/'.format(indent, os.path.basename(root)))
+        subindent = ' ' * 4 * (level + 1)
+        for f in files:
+            print('{}{}'.format(subindent, f))
 
 # NOTE: caplog is a special pytest "fixture" - that will capture log
 # content from the python logger
@@ -54,6 +63,13 @@ def setup_container_dir(basedir, versions, latest, arc_links=None):
 
 
 def test_single_version_duplicate_changed_to_symlink(caplog):
+    # Test case:
+    # - Single version in GWS and archive
+    # - latest links in both locations pointing to local version
+    # ACTION: 
+    # - Delete GWS version dir (test_gws/v20220202)
+    # - Create link instead to Archived version dir 
+    #   i.e. link 'v20220202' in the GWS that points to test_arc/v20220202
     setup_container_dir("test_gws", ["v20220202"], latest="v20220202")
     setup_container_dir("test_arc", ["v20220202"], latest="v20220202")
     
@@ -66,6 +82,9 @@ def test_single_version_duplicate_changed_to_symlink(caplog):
                         "test_gws/v20220202 "
                         "and symlink to: "
                         "test_arc/v20220202")
+
+    list_files('./test_gws')
+    list_files('./test_arc')
 
     import pdb ; pdb.set_trace() 
 
