@@ -1,28 +1,29 @@
 from pathlib import Path
 import os
+import shutil
 
 import logging
 from symlark.symlark import main
 
+TOP_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# NOTE: caplog is a special pytest "fixture" - that will capture log
-# content from the python logger
-def test_finding_our_feet(caplog):
-    gws_dir, arc_dir = ("/gws/pw/j07/ukcp18/pre-archive/ukcp18/data/land-prob/global/glb/rcp85/cdf/b8110/30y/tasAnom",
-            "/badc/ukcp18/data/land-prob/global/glb/rcp85/cdf/b8110/30y/tasAnom")
+TEST_DATA = "tests/TEST_DATA"
+TEST_GWS = f"{TEST_DATA}/test_gws"
+TEST_ARC = f"{TEST_DATA}/test_arc"
+TEST_GWS_TO_ARC = f"../../../{TEST_ARC}"
 
-    caplog.set_level(logging.DEBUG)
-    main(gws_dir, arc_dir)
 
-    expected_log_msg = ("[ACTION] Delete "
-                        "/gws/pw/j07/ukcp18/pre-archive/ukcp18/data/land-prob/global/glb/rcp85/cdf/b8110/30y/tasAnom/ann/v20190429 "
-                        "and symlink to: "
-                        "/badc/ukcp18/data/land-prob/global/glb/rcp85/cdf/b8110/30y/tasAnom/ann/v20190429")
-    assert len(caplog.records) == 1
-    assert caplog.records[0].message == expected_log_msg
+def _delete_test_data():
+    if os.path.isdir(TEST_DATA):
+        shutil.rmtree(TEST_DATA)
 
-    # We would expect to check file system things as well
- #   assert Path("/gws/pw/j07/ukcp18/pre-archive/ukcp18/data/land-prob/global/glb/rcp85/cdf/b8110/30y/tasAnom/ann/v20190429").readlink().as_posix("/badc/ukcp18/data/land-prob/global/glb/rcp85/cdf/b8110/30y/tasAnom/ann/v20190429) == 
+def setup_function():
+    # Will be run before each test is run
+    _delete_test_data()
+
+def teardown_function():
+    # Will be run after each test is run
+    _delete_test_data()
 
 
 def check_dir(dr):
@@ -30,37 +31,95 @@ def check_dir(dr):
         os.makedirs(dr)
 
 
-def setup_container_dir(basedir, versions, latest, arc_links=None):
+def create_files(dr, n=3, fnames=None):
+    fnames = fnames or [f"file_{i+1}.nc" for i in range(n)]
+    [open(f"{dr}/{fname}", "w") for fname in fnames]
+
+
+def setup_container_dir(basedir, versions, latest=None, arc_links=None):
     check_dir(basedir)
+
     for version in versions:
-        check_dir(f"{basedir}/{version}")
+        dr = f"{basedir}/{version}"
+        check_dir(dr)
+        create_files(dr)
 
     if latest:
-        pass # Would create symlink here 
-
+        os.chdir(basedir)
+        os.symlink(latest, "latest")
+    
     if arc_links:
-        pass # Link to archive equivalent
+        for arc_link, av_dir in arc_links.items():
+            target = f"{TEST_GWS_TO_ARC}/{av_dir}"
+            os.symlink(target, arc_link) 
 
-
-def test_single_version_duplicate_changed_to_symlink(caplog):
-    setup_container_dir("test_gws", ["v20220202"], latest="v20220202")
-    setup_container_dir("test_arc", ["v20220202"], latest="v20220202")
-
-#    main(f"test_gws", "test_arc")
-    # Now check the logs are correct
-    # And check the file system is correct
-
+    os.chdir(TOP_DIR)
 
 
 def test_single_version_already_correctly_symlinked(caplog):
-    setup_container_dir("test_arc", ["v20220203"], latest="v20220203")
-    setup_container_dir("test_gws", [], latest="v20220203", arc_links={
-        "v20220203": "test_arc/v20220203"
+    setup_container_dir(TEST_ARC, ["v20220203"], latest="v20220203")
+    setup_container_dir(TEST_GWS, [], latest="v20220203", arc_links={
+        "v20220203": "v20220203"
     })
 
+    caplog.set_level(logging.INFO)
+    main(TEST_GWS, TEST_ARC)
+    assert caplog.records[0].message == f"{TEST_GWS}/v20220203 correctly points to: {TEST_ARC}/v20220203"
 
-    main(f"test_gws", "test_arc")
-    # Assert log says: f"[INFO] Already linked: {gws_dir}"
 
-    # Now check the logs are correct
-    # And check the file system is correct
+def test_top_level_dir_does_not_exist(caplog):
+    setup_container_dir(TEST_GWS, [])
+
+    caplog.set_level(logging.INFO)
+    NO_DIR = "no-arc-dir"
+    main(TEST_GWS, NO_DIR)
+
+    assert caplog.records[0].message == f"Top-level directory does not exist: {NO_DIR}"
+
+
+def test_no_content_in_gws_dir(caplog):
+    setup_container_dir(TEST_GWS, [])
+    setup_container_dir(TEST_ARC, [])
+
+    caplog.set_level(logging.INFO)
+    main(TEST_GWS, TEST_ARC)
+
+    assert caplog.records[0].message == f"No content found in directory: {TEST_GWS}"
+
+
+def test_single_version_needs_deleting_and_symlink(caplog):
+    setup_container_dir(TEST_ARC, ["v20220203"], latest="v20220203")
+    setup_container_dir(TEST_GWS, ["v20220203"], latest="v20220203", arc_links=None)
+
+    caplog.set_level(logging.INFO)
+    main(TEST_GWS, TEST_ARC)
+
+    gv_dir = f"{TEST_GWS}/v20220203"
+    av_dir = f"{TEST_ARC}/v20220203"
+
+    assert caplog.records[0].message == f"Deleting files in: {gv_dir}"
+    assert caplog.records[1].message == f"Deleting directory: {gv_dir}"
+    assert caplog.records[2].message == f"Symlinking {gv_dir} to: {av_dir}"
+    assert caplog.records[3].message == f"[ACTION] Deleted {gv_dir} and symlinked to: {av_dir}"
+
+
+def test_old_gws_version_needs_deleting_and_symlink(caplog):
+    setup_container_dir(TEST_ARC, ["v20110101", "v20220203"], latest="v20220203")
+    setup_container_dir(TEST_GWS, ["v20110101"], latest="v20220203", arc_links={
+        "v20220203": "v20220203"
+    })
+
+    caplog.set_level(logging.INFO)
+    main(TEST_GWS, TEST_ARC)
+
+    gv_dir2 = f"{TEST_GWS}/v20220203"
+    av_dir2 = f"{TEST_ARC}/v20220203"
+
+    gv_dir = f"{TEST_GWS}/v20110101"
+    av_dir = f"{TEST_ARC}/v20110101"
+
+    assert caplog.records[0].message == f"{gv_dir2} correctly points to: {av_dir2}"
+    assert caplog.records[1].message == f"Deleting files in: {gv_dir}"
+    assert caplog.records[2].message == f"Deleting directory: {gv_dir}"
+    assert caplog.records[3].message == f"Symlinking {gv_dir} to: {av_dir}"
+    assert caplog.records[4].message == f"[ACTION] Deleted old version in GWS: {gv_dir}"

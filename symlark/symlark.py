@@ -37,7 +37,7 @@ def dirs_match(d1: str, d2: str, basedir1: str, basedir2: str) -> bool:
     l2 = nested_list(d2, remove_base=basedir2)
 
     if l1 != l2:
-        print(f"[ERROR] dirs have different listed contents: {d1} vs {d2}")
+        logger.error(f"Dirs have different listed contents: {d1} vs {d2}")
         return
 
     for i in d1:
@@ -47,16 +47,30 @@ def dirs_match(d1: str, d2: str, basedir1: str, basedir2: str) -> bool:
         if os.path.isfile(i1):
             s1, s2 = [size(item) for item in (i1, i2)]
             if s1 != s2:
-                print(f"[ERROR] Files differ in size: {i1} = {s1} vs {i2} = {s2}")
+                logger.error(f"Files differ in size: {i1} = {s1} vs {i2} = {s2}")
                 errs += 1
             else:
                 m1, m2 = [md5(item) for item in (i1, i2)]
                 if m1 != m2:
-                    print(f"[ERROR] Files differ in MD5: {i1} vs {i2}")
+                    logger.error(f"Files differ in MD5: {i1} vs {i2}")
                     errs += 1
 
     res = True if errs == 0 else False
     return res    
+
+
+def delete_dir(dr):
+    logger.warning(f"Deleting files in: {dr}")
+    for fname in os.listdir(dr):
+        os.remove(f"{dr}/{fname}")
+
+    logger.warning(f"Deleting directory: {dr}")
+    os.rmdir(dr)
+
+
+def symlink(target, symlink):
+    logger.warning(f"Symlinking {symlink} to: {target}")
+    os.symlink(target, symlink) 
 
 
 def md5(f: str, blocksize: int=65536) -> str:
@@ -91,6 +105,7 @@ class VersionDir:
         self.as_path = Path(dr)
         self.base, self.version = os.path.split(dr)
 
+
 class ArchiveDir:
     def __init__(self, dr):
         self.dr = dr
@@ -101,62 +116,72 @@ class ArchiveDir:
         self._check_valid()
 
     def _check_valid(self):
-        errs = 0
+        valid = True
         if not os.path.isdir(self.dr):
-            errs += 1
-            print(f"[ERROR] Archive container directory is missing: {self.dr}")
+            valid = False
+            logger.error(f"Archive container directory is missing: {self.dr}")
         elif not self.versions:
-            errs += 1
-            print(f"[ERROR] No version directories found in container directory: {self.dr}")
+            valid = False
+            logger.error(f"No version directories found in container directory: {self.dr}")
         
         if not self.latest:
-            errs += 1
-            print(f"[ERROR] No latest link in container directory: {self.dr}")
+            valid = False
+            logger.error(f"No latest link in container directory: {self.dr}")
         elif self._latest_path.readlink().as_posix() != self.versions[-1]:
-            errs += 1
-            print(f"[ERROR] latest link is not pointing to most recent version in: {self.dr}")
+            valid = False
+            logger.error(f"Latest link is not pointing to most recent version in: {self.dr}")
 
-        self.valid = True if errs == 0 else False
+        self.valid = valid
 
 
 def main(bd1: str, bd2: str) -> None:
-    for d1 in identify_dirs(bd1):
+
+    for dr in (bd1, bd2):
+        if not os.path.isdir(dr):
+            logger.error(f"Top-level directory does not exist: {dr}")
+            return
+
+    dirs_to_check = identify_dirs(bd1)
+
+    if not dirs_to_check:
+        logger.error(f"No content found in directory: {bd1}")
+
+    for d1 in dirs_to_check:
         gws_dir = VersionDir(d1)
         gws_versions = find_versions(gws_dir.dr)
+
         arc_dir = ArchiveDir(d1.replace(bd1, bd2))
 
-        if gws_dir.as_path.is_symlink() and gws_dir.as_path.readlink().as_posix() == arc_dir:
-            logger.info(f"[INFO] Already linked: {gws_dir}")
+        # If archive dir is invalid then needs fixing before other checks can be done
+        if not arc_dir.valid:
             continue
 
+        # Loop through all GWS versions and check them
         for gws_version in reversed(gws_versions):
             gv_path, av_path = [os.path.join(bdir, gws_version) for bdir in (gws_dir.dr, arc_dir.dr)]
-            print(f"[INFO] Working on: {gv_path}")
-            print(f"              and: {av_path}")
+            logger.debug(f"[INFO] Working on: {gv_path}")
+            logger.debug(f"              and: {av_path}")
 
+            # If the GWS version is older than the latest archive version: delete the GWS version
             if gws_version < arc_dir.latest:
-                print(f"[ACTION] Delete old version in GWS: {gv_path}")
+                delete_dir(gv_path)
+                symlink(av_path, gv_path)
+                logger.warning(f"[ACTION] Deleted old version in GWS: {gv_path}")
+            
+            # If they are the same:
             elif gws_version == arc_dir.latest:
-                if dirs_match(gv_path, av_path, bd1, bd2):
-                    logger.warning(f"[ACTION] Delete {gv_path} and symlink to: {av_path}")
+
+                # TODO: find a better solution than ".endswith(av_path)" - should match equivalence
+                if Path(gv_path).is_symlink() and Path(gv_path).readlink().as_posix().endswith(av_path):
+                    logger.info(f"{gv_path} correctly points to: {av_path}")
+                elif dirs_match(gv_path, av_path, bd1, bd2):
+                    delete_dir(gv_path)
+                    symlink(av_path, gv_path)
+                    logger.warning(f"[ACTION] Deleted {gv_path} and symlinked to: {av_path}")
+
+            # If the GWS version is newer: then maybe this is ready for ingestion, or needs attention
             else:
-                print(f"[WARNING] GWS version is newer than archive dir: {gv_path} newer than {av_path}")
-                print(f"          And latest link points to {Path(gws_dir + '/latest').readlink()}")
+                logger.warning(f"GWS version is newer than archive dir: {gv_path} newer than {av_path}")
+                logger.warning(f"    And latest link points to {Path(gws_dir + '/latest').readlink()}")
 
 
-
-
-test_data = [
-    [
-        "/gws/pw/j07/ukcp18/pre-archive/ukcp18/data/land-prob/global/glb/rcp85/cdf/b8110/30y/tasAnom",
-        "/badc/ukcp18/data/land-prob/global/glb/rcp85/cdf/b8110/30y/tasAnom",
-        True
-    ]
-]
-
-def test_main():
-    td1, td2, outcome = test_data[0]
-    res = main(td1, td2)
-
-
-test_main()
