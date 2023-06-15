@@ -49,6 +49,12 @@ def setup_container_dir(basedir, versions, latest=None, arc_links=None):
         os.symlink(latest, "latest")
     
     if arc_links:
+        cwd = os.getcwd()
+        print(cwd)
+        if not basedir in cwd:
+            # If not already in basedir, change to basedir (this is the case if no 'latest' link is specificed)
+            os.chdir(basedir)
+            
         for arc_link, av_dir in arc_links.items():
             target = f"{TEST_GWS_TO_ARC}/{av_dir}"
             print(target)
@@ -126,14 +132,21 @@ def test_old_gws_version_needs_deleting_and_symlink(caplog):
     assert caplog.records[3].message == f"Symlinking {gv_dir} to: {av_dir}"
     assert caplog.records[4].message == f"[ACTION] Deleted old version in GWS: {gv_dir}"
     
+    #import pdb ; pdb.set_trace()
+
+    
 def test_newer_gws_than_archive(caplog):
     # Create an archive directory with one version v20220203
-    setup_container_dir(TEST_ARC, ["v20220203"])
-    
-    # Create a GWS that points to archive version above
-    setup_container_dir(TEST_GWS, [], arc_links={"v20220203": "v20220203"})
+    setup_container_dir(TEST_ARC, ["v20220203"], latest="v20220203")
     
     # Create a GWS called v24440404 that holds data
-    setup_container_dir(TEST_GWS, ["v24440404"])
+    # AND    
+    # Create a GWS that points to archive version above
+    setup_container_dir(TEST_GWS, ["v24440404"], arc_links={"v20220203": "v20220203"})
     
     caplog.set_level(logging.INFO)
+    main(TEST_GWS, TEST_ARC)
+    
+    len(caplog.records)
+    
+    #import pdb ; pdb.set_trace()
