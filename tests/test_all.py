@@ -44,16 +44,13 @@ def setup_container_dir(basedir, versions, latest=None, arc_links=None):
         check_dir(dr)
         create_files(dr)
 
+    # Change to basedir
+    os.chdir(basedir)
+
     if latest:
-        os.chdir(basedir)
         os.symlink(latest, "latest")
     
-    if arc_links:
-        cwd = os.getcwd()
-        if not basedir in cwd:
-            # If not already in basedir, change to basedir (this is the case if no 'latest' link is specificed)
-            os.chdir(basedir)
-            
+    if arc_links:    
         for arc_link, av_dir in arc_links.items():
             target = f"{TEST_GWS_TO_ARC}/{av_dir}"
             os.symlink(target, arc_link) 
@@ -142,6 +139,13 @@ def test_newer_gws_than_archive(caplog):
     caplog.set_level(logging.INFO)
     main(TEST_GWS, TEST_ARC)
     
-    len(caplog.records)
-    
+    gv_dir = f"{TEST_GWS}/v20220203"
+    av_dir = f"{TEST_ARC}/v20220203"
+
+    gv_dir2 = f"{TEST_GWS}/v24440404"
+
+    assert caplog.records[0].message == f"GWS version is newer than archive dir: {gv_dir2} newer than {av_dir}"
+    assert caplog.records[1].message == f"    No latest link exists for {gv_dir2}"
+    assert caplog.records[2].message == f"{gv_dir} correctly points to: {av_dir}"
+
     #import pdb ; pdb.set_trace()
