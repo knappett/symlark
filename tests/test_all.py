@@ -44,11 +44,13 @@ def setup_container_dir(basedir, versions, latest=None, arc_links=None):
         check_dir(dr)
         create_files(dr)
 
+    # Change to basedir
+    os.chdir(basedir)
+
     if latest:
-        os.chdir(basedir)
         os.symlink(latest, "latest")
     
-    if arc_links:
+    if arc_links:    
         for arc_link, av_dir in arc_links.items():
             target = f"{TEST_GWS_TO_ARC}/{av_dir}"
             os.symlink(target, arc_link) 
@@ -123,3 +125,27 @@ def test_old_gws_version_needs_deleting_and_symlink(caplog):
     assert caplog.records[2].message == f"Deleting directory: {gv_dir}"
     assert caplog.records[3].message == f"Symlinking {gv_dir} to: {av_dir}"
     assert caplog.records[4].message == f"[ACTION] Deleted old version in GWS: {gv_dir}"
+    
+    
+def test_newer_gws_than_archive(caplog):
+    # Create an archive directory with one version v20220203
+    setup_container_dir(TEST_ARC, ["v20220203"], latest="v20220203")
+    
+    # Create a GWS called v24440404 that holds data
+    # AND    
+    # Create a GWS that points to archive version above
+    setup_container_dir(TEST_GWS, ["v24440404"], arc_links={"v20220203": "v20220203"})
+    
+    caplog.set_level(logging.INFO)
+    main(TEST_GWS, TEST_ARC)
+    
+    gv_dir = f"{TEST_GWS}/v20220203"
+    av_dir = f"{TEST_ARC}/v20220203"
+
+    gv_dir2 = f"{TEST_GWS}/v24440404"
+
+    assert caplog.records[0].message == f"GWS version is newer than archive dir: {gv_dir2} newer than {av_dir}"
+    assert caplog.records[1].message == f"    No latest link exists for {gv_dir2}"
+    assert caplog.records[2].message == f"{gv_dir} correctly points to: {av_dir}"
+
+    #import pdb ; pdb.set_trace()

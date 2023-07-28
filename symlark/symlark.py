@@ -96,7 +96,7 @@ def identify_dirs(d: str, pattern: str=r"v\d{8}") -> list:
 
 
 def find_versions(dr):
-    return sorted([os.path.basename(v) for v in glob.glob(f"{dr}/v20??????")])
+    return sorted([os.path.basename(v) for v in glob.glob(f"{dr}/v????????")])
 
 
 class VersionDir:
@@ -181,7 +181,11 @@ def main(bd1: str, bd2: str) -> None:
 
             # If the GWS version is newer: then maybe this is ready for ingestion, or needs attention
             else:
-                logger.warning(f"GWS version is newer than archive dir: {gv_path} newer than {av_path}")
-                logger.warning(f"    And latest link points to {Path(gws_dir + '/latest').readlink()}")
+                logger.warning(f"GWS version is newer than archive dir: {gv_path} newer than {arc_dir.dr}/{arc_dir.latest}")
+                latest_link=Path(gws_dir.dr + '/latest')
+                if os.path.exists(latest_link):
+                    logger.warning(f"    And latest link points to {latest_link.readlink()}")
+                else:
+                    logger.warning(f"    No latest link exists for {gv_path}")
 
 
