@@ -179,6 +179,15 @@ def main(bd1: str, bd2: str) -> None:
                     symlink(av_path, gv_path)
                     logger.warning(f"[ACTION] Deleted {gv_path} and symlinked to: {av_path}")
 
+                arc_latest_link=Path(arc_dir.dr + '/latest')
+                logger.warning(f"    Archive latest link points to {arc_latest_link.readlink()}")
+
+                gws_latest_link=Path(gws_dir.dr + '/latest')
+                if os.path.exists(gws_latest_link):
+                    logger.warning(f"    GWS latest link points to {gws_latest_link.readlink()}")
+                else:
+                    logger.warning(f"    No latest link exists for {gv_path}")                
+
             # If the GWS version is newer: then maybe this is ready for ingestion, or needs attention
             else:
                 logger.warning(f"GWS version is newer than archive dir: {gv_path} newer than {arc_dir.dr}/{arc_dir.latest}")

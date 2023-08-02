@@ -57,18 +57,6 @@ def setup_container_dir(basedir, versions, latest=None, arc_links=None):
 
     os.chdir(TOP_DIR)
 
-
-def test_single_version_already_correctly_symlinked(caplog):
-    setup_container_dir(TEST_ARC, ["v20220203"], latest="v20220203")
-    setup_container_dir(TEST_GWS, [], latest="v20220203", arc_links={
-        "v20220203": "v20220203"
-    })
-
-    caplog.set_level(logging.INFO)
-    main(TEST_GWS, TEST_ARC)
-    assert caplog.records[0].message == f"{TEST_GWS}/v20220203 correctly points to: {TEST_ARC}/v20220203"
-
-
 def test_top_level_archive_dir_does_not_exist(caplog):
     setup_container_dir(TEST_GWS, [])
 
@@ -105,6 +93,37 @@ def test_no_content_in_gws_dir(caplog):
 
     assert caplog.records[0].message == f"No content found in directory: {TEST_GWS}"
 
+def test_single_version_already_correctly_symlinked(caplog):
+    setup_container_dir(TEST_ARC, ["v20220203"], latest="v20220203")
+    setup_container_dir(TEST_GWS, [], latest="v20220203", arc_links={
+        "v20220203": "v20220203"
+    })
+
+    caplog.set_level(logging.INFO)
+    main(TEST_GWS, TEST_ARC)
+    assert caplog.records[0].message == f"{TEST_GWS}/v20220203 correctly points to: {TEST_ARC}/v20220203"
+
+def test_single_version_gws_correctly_symlinked_no_arc_latest(caplog):
+    setup_container_dir(TEST_ARC, ["v20240203"])
+    setup_container_dir(TEST_GWS, [], latest="v20240203", arc_links={
+        "v20240203": "v20240203"
+    })
+
+    caplog.set_level(logging.INFO)
+    main(TEST_GWS, TEST_ARC)
+    assert caplog.records[0].message == f"No latest link in container directory: {TEST_ARC}"
+
+def test_single_version_gws_symlinked_no_gws_latest_but_arc_latest(caplog):
+    setup_container_dir(TEST_ARC, ["v20240203"], latest="v20240203")
+    setup_container_dir(TEST_GWS, [], arc_links={
+        "v20240203": "v20240203"
+    })
+
+    caplog.set_level(logging.INFO)
+    main(TEST_GWS, TEST_ARC)
+    assert caplog.records[0].message == f"{TEST_GWS}/v20240203 correctly points to: {TEST_ARC}/v20240203"
+    assert caplog.records[1].message == f"    Archive latest link points to v20240203"
+    assert caplog.records[2].message == f"    No latest link exists for {TEST_GWS}/v20240203"
 
 def test_single_version_needs_deleting_and_symlink(caplog):
     setup_container_dir(TEST_ARC, ["v20220203"], latest="v20220203")
@@ -138,10 +157,12 @@ def test_old_gws_version_needs_deleting_and_symlink(caplog):
     av_dir = f"{TEST_ARC}/v20110101"
 
     assert caplog.records[0].message == f"{gv_dir2} correctly points to: {av_dir2}"
-    assert caplog.records[1].message == f"Deleting files in: {gv_dir}"
-    assert caplog.records[2].message == f"Deleting directory: {gv_dir}"
-    assert caplog.records[3].message == f"Symlinking {gv_dir} to: {av_dir}"
-    assert caplog.records[4].message == f"[ACTION] Deleted old version in GWS: {gv_dir}"
+    assert caplog.records[1].message == f"    Archive latest link points to v20220203"
+    assert caplog.records[2].message == f"    GWS latest link points to v20220203"
+    assert caplog.records[3].message == f"Deleting files in: {gv_dir}"
+    assert caplog.records[4].message == f"Deleting directory: {gv_dir}"
+    assert caplog.records[5].message == f"Symlinking {gv_dir} to: {av_dir}"
+    assert caplog.records[6].message == f"[ACTION] Deleted old version in GWS: {gv_dir}"
     
     
 def test_newer_gws_than_archive(caplog):
