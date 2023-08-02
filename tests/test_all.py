@@ -69,7 +69,7 @@ def test_single_version_already_correctly_symlinked(caplog):
     assert caplog.records[0].message == f"{TEST_GWS}/v20220203 correctly points to: {TEST_ARC}/v20220203"
 
 
-def test_top_level_dir_does_not_exist(caplog):
+def test_top_level_archive_dir_does_not_exist(caplog):
     setup_container_dir(TEST_GWS, [])
 
     caplog.set_level(logging.INFO)
@@ -78,6 +78,23 @@ def test_top_level_dir_does_not_exist(caplog):
 
     assert caplog.records[0].message == f"Top-level directory does not exist: {NO_DIR}"
 
+def test_top_level_gws_dir_does_not_exist(caplog):
+    setup_container_dir(TEST_ARC, [])
+
+    caplog.set_level(logging.INFO)
+    NO_DIR = "no-gws-dir"
+    main(NO_DIR, TEST_ARC)
+
+    assert caplog.records[0].message == f"Top-level directory does not exist: {NO_DIR}"
+
+def test_no_content_in_archive_dir(caplog):
+    setup_container_dir(TEST_GWS, ["v20250203"])
+    setup_container_dir(TEST_ARC, [])
+
+    caplog.set_level(logging.INFO)
+    main(TEST_GWS, TEST_ARC)
+
+    assert caplog.records[0].message == f"No version directories found in container directory: {TEST_ARC}"
 
 def test_no_content_in_gws_dir(caplog):
     setup_container_dir(TEST_GWS, [])
