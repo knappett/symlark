@@ -180,10 +180,7 @@ def main(bd1: str, bd2: str) -> None:
                     logger.warning(f"[ACTION] Deleted {gv_path} and symlinked to: {av_path}")
 
                 arc_latest_link=Path(arc_dir.dr + '/latest')
-                if os.path.exists(arc_latest_link):
-                    logger.warning(f"    Archive latest link points to {arc_latest_link.readlink()}")
-                else:
-                    logger.warning(f"    No latest link exists for {av_path}")
+                logger.warning(f"    Archive latest link points to {arc_latest_link.readlink()}")
 
                 gws_latest_link=Path(gws_dir.dr + '/latest')
                 if os.path.exists(gws_latest_link):
