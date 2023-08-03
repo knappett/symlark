@@ -58,6 +58,7 @@ def setup_container_dir(basedir, versions, latest=None, arc_links=None):
     os.chdir(TOP_DIR)
 
 def test_top_level_archive_dir_does_not_exist(caplog):
+    '''Tests for a non-existent archive directory.'''
     setup_container_dir(TEST_GWS, [])
 
     caplog.set_level(logging.INFO)
@@ -67,6 +68,7 @@ def test_top_level_archive_dir_does_not_exist(caplog):
     assert caplog.records[0].message == f"Top-level directory does not exist: {NO_DIR}"
 
 def test_top_level_gws_dir_does_not_exist(caplog):
+    '''Tests for a non-existent GWS directory.'''
     setup_container_dir(TEST_ARC, [])
 
     caplog.set_level(logging.INFO)
@@ -76,6 +78,7 @@ def test_top_level_gws_dir_does_not_exist(caplog):
     assert caplog.records[0].message == f"Top-level directory does not exist: {NO_DIR}"
 
 def test_no_content_in_archive_dir(caplog):
+    '''Tests for an empty archive directory.'''
     setup_container_dir(TEST_GWS, ["v20250203"])
     setup_container_dir(TEST_ARC, [])
 
@@ -85,6 +88,7 @@ def test_no_content_in_archive_dir(caplog):
     assert caplog.records[0].message == f"No version directories found in container directory: {TEST_ARC}"
 
 def test_no_content_in_gws_dir(caplog):
+    '''Tests for an empty GWS directory.'''
     setup_container_dir(TEST_GWS, [])
     setup_container_dir(TEST_ARC, [])
 
@@ -94,6 +98,7 @@ def test_no_content_in_gws_dir(caplog):
     assert caplog.records[0].message == f"No content found in directory: {TEST_GWS}"
 
 def test_single_version_already_correctly_symlinked(caplog):
+    '''Tests for 1 version directory in the archive, correctly symlinked in the GWS, with latest links present in both the GWS and archive.'''
     setup_container_dir(TEST_ARC, ["v20220203"], latest="v20220203")
     setup_container_dir(TEST_GWS, [], latest="v20220203", arc_links={
         "v20220203": "v20220203"
@@ -104,6 +109,7 @@ def test_single_version_already_correctly_symlinked(caplog):
     assert caplog.records[0].message == f"{TEST_GWS}/v20220203 correctly points to: {TEST_ARC}/v20220203"
 
 def test_single_version_gws_correctly_symlinked_no_arc_latest(caplog):
+    '''Tests for 1 version directory in the archive, correctly symlinked in the GWS, with a latest link in the GWS but missing from the archive.'''
     setup_container_dir(TEST_ARC, ["v20240203"])
     setup_container_dir(TEST_GWS, [], latest="v20240203", arc_links={
         "v20240203": "v20240203"
@@ -114,6 +120,7 @@ def test_single_version_gws_correctly_symlinked_no_arc_latest(caplog):
     assert caplog.records[0].message == f"No latest link in container directory: {TEST_ARC}"
 
 def test_single_version_gws_symlinked_no_gws_latest_but_arc_latest(caplog):
+    '''Tests for 1 version directory in the archive, correctly symlinked in the GWS, with a latest link in archive but missing from the GWS.'''
     setup_container_dir(TEST_ARC, ["v20240203"], latest="v20240203")
     setup_container_dir(TEST_GWS, [], arc_links={
         "v20240203": "v20240203"
@@ -126,6 +133,7 @@ def test_single_version_gws_symlinked_no_gws_latest_but_arc_latest(caplog):
     assert caplog.records[2].message == f"    No latest link exists for {TEST_GWS}/v20240203"
 
 def test_single_version_needs_deleting_and_symlink(caplog):
+    '''Tests for 1 version directory in the archive that's duplicated in the GWS (i.e. not yet symlinked).'''
     setup_container_dir(TEST_ARC, ["v20220203"], latest="v20220203")
     setup_container_dir(TEST_GWS, ["v20220203"], latest="v20220203", arc_links=None)
 
@@ -142,6 +150,7 @@ def test_single_version_needs_deleting_and_symlink(caplog):
 
 
 def test_old_gws_version_needs_deleting_and_symlink(caplog):
+    '''Tests for 2 version directories in the archive where the latest one is corectly symlinked but the original one is still duplicated in the GWS (i.e. not yet symlinked).'''
     setup_container_dir(TEST_ARC, ["v20110101", "v20220203"], latest="v20220203")
     setup_container_dir(TEST_GWS, ["v20110101"], latest="v20220203", arc_links={
         "v20220203": "v20220203"
@@ -166,6 +175,7 @@ def test_old_gws_version_needs_deleting_and_symlink(caplog):
     
     
 def test_newer_gws_than_archive(caplog):
+    '''Tests for 2 version directories in the GWS and 1 version in the archive (i.e. there's new data in the GWS that hasn't yet been archived).'''
     # Create an archive directory with one version v20220203
     setup_container_dir(TEST_ARC, ["v20220203"], latest="v20220203")
     
