@@ -164,9 +164,12 @@ def main(bd1: str, bd2: str) -> None:
 
             # If the GWS version is older than the latest archive version: delete the GWS version
             if gws_version < arc_dir.latest:
-                delete_dir(gv_path)
-                symlink(av_path, gv_path)
-                logger.warning(f"[ACTION] Deleted old version in GWS: {gv_path}")
+                if os.path.islink(gv_path):
+                    logger.warning(f"GWS symlink already exists: {gv_path}")
+                else:
+                    delete_dir(gv_path)
+                    symlink(av_path, gv_path)
+                    logger.warning(f"[ACTION] Deleted old version in GWS: {gv_path}")
             
             # If they are the same:
             elif gws_version == arc_dir.latest:
