@@ -212,4 +212,3 @@ def test_two_archive_versions_only_old_gws_version(caplog):
     gv_dir = f"{TEST_GWS}/v20250601"
 
     assert caplog.records[0].message == f"GWS symlink already exists: {gv_dir}"
-    import pdb ; pdb.set_trace()
