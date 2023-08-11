@@ -197,3 +197,18 @@ def test_newer_gws_than_archive(caplog):
     assert caplog.records[2].message == f"{gv_dir} correctly points to: {av_dir}"
 
     #import pdb ; pdb.set_trace()
+
+def test_two_archive_versions_only_old_gws_version(caplog):
+    '''Tests for 2 version directories in the archive and 1 (old) version in the GWS.'''
+    setup_container_dir(TEST_ARC, ["v20250601", "v20260607"], latest="v20260607")
+    setup_container_dir(TEST_GWS, [], latest="v20250601",arc_links={"v20250601": "v20250601"})
+
+    caplog.set_level(logging.INFO)
+    main(TEST_GWS, TEST_ARC)
+
+    av_dir = f"{TEST_ARC}/v20250601"
+    av_dir2 = f"{TEST_ARC}/v20260607"
+
+    gv_dir = f"{TEST_GWS}/v20250601"
+
+    assert caplog.records[0].message == f"GWS symlink already exists: {gv_dir}"
