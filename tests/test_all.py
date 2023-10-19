@@ -204,6 +204,9 @@ def test_newer_gws_than_archive(caplog):
     #import pdb ; pdb.set_trace()
 
 def test_two_archive_versions_only_old_gws_version(caplog):
+    #TEST_ARC = "/home/users/dknappett/symlark/tests/TEST_DATA/test_arc"
+    #TEST_GWS = "/home/users/dknappett/symlark/tests/TEST_DATA/test_gws"
+
     '''Tests for 2 version directories in the archive and 1 (old) version in the GWS.'''
     setup_container_dir(TEST_ARC, ["v20250601", "v20260607"], latest="v20260607")
     setup_container_dir(TEST_GWS, [], latest="v20250601",arc_links={"v20250601": "v20250601"})

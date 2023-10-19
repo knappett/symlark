@@ -163,12 +163,12 @@ def main(base_dir1: str, base_dir2: str) -> None:
 
         # Check that most recent archive version is not greater than most recent GWS version
         # If it is then create a symlink in the GWS and rerun identify_dirs list (or prefix it)
-        most_recent_arc = (list(reversed(arc_versions))[0])[1:]
-        most_recent_gws = (list(reversed(gws_versions))[0])[1:]
+        most_recent_arc = (list(reversed(arc_versions))[0])
+        most_recent_gws = (list(reversed(gws_versions))[0])
         if most_recent_arc > most_recent_gws:
             logger.warning("Most recent archive version directory newer than most recent GWS version directory.")
             # Create symlink from GWS to archive
-            gv_path, av_path = [os.path.join(bdir, 'v'+most_recent_arc) for bdir in (gws_dir.dr, arc_dir.dr)]
+            gv_path, av_path = [os.path.join(bdir, most_recent_arc) for bdir in (gws_dir.dr, arc_dir.dr)]
             symlink(av_path, gv_path)
             # Append the new GWS symlink version to the gws_versions list
             gws_versions.append(os.path.basename(gv_path))
