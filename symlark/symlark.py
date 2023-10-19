@@ -134,27 +134,44 @@ class ArchiveDir:
         self.valid = valid
 
 
-def main(bd1: str, bd2: str) -> None:
+def main(base_dir1: str, base_dir2: str) -> None:
 
-    for dr in (bd1, bd2):
+    for dr in (base_dir1, base_dir2):
         if not os.path.isdir(dr):
             logger.error(f"Top-level directory does not exist: {dr}")
             return
 
-    dirs_to_check = identify_dirs(bd1)
+    # Ensure paths are absolute, not relative, so that they can be used to create symlinks
+    base_dir1 = os.path.abspath(base_dir1)
+    base_dir2 = os.path.abspath(base_dir2)
 
-    if not dirs_to_check:
-        logger.error(f"No content found in directory: {bd1}")
+    gws_dirs_to_check = identify_dirs(base_dir1)
 
-    for d1 in dirs_to_check:
+    if not gws_dirs_to_check:
+        logger.error(f"No content found in directory: {base_dir1}")
+
+    for d1 in gws_dirs_to_check:
         gws_dir = VersionDir(d1)
         gws_versions = find_versions(gws_dir.dr)
 
-        arc_dir = ArchiveDir(d1.replace(bd1, bd2))
+        arc_dir = ArchiveDir(d1.replace(base_dir1, base_dir2))
+        arc_versions = find_versions(arc_dir.dr)
 
         # If archive dir is invalid then needs fixing before other checks can be done
         if not arc_dir.valid:
             continue
+
+        # Check that most recent archive version is not greater than most recent GWS version
+        # If it is then create a symlink in the GWS and rerun identify_dirs list (or prefix it)
+        most_recent_arc = (list(reversed(arc_versions))[0])
+        most_recent_gws = (list(reversed(gws_versions))[0])
+        if most_recent_arc > most_recent_gws:
+            logger.warning("Most recent archive version directory newer than most recent GWS version directory.")
+            # Create symlink from GWS to archive
+            gv_path, av_path = [os.path.join(bdir, most_recent_arc) for bdir in (gws_dir.dr, arc_dir.dr)]
+            symlink(av_path, gv_path)
+            # Append the new GWS symlink version to the gws_versions list
+            gws_versions.append(os.path.basename(gv_path))
 
         # Loop through all GWS versions and check them
         for gws_version in reversed(gws_versions):
@@ -175,9 +192,9 @@ def main(bd1: str, bd2: str) -> None:
             elif gws_version == arc_dir.latest:
 
                 # TODO: find a better solution than ".endswith(av_path)" - should match equivalence
-                if Path(gv_path).is_symlink() and Path(gv_path).readlink().as_posix().endswith(av_path):
+                if Path(gv_path).is_symlink(): #and Path(gv_path).readlink().as_posix().endswith(av_path):
                     logger.info(f"{gv_path} correctly points to: {av_path}")
-                elif dirs_match(gv_path, av_path, bd1, bd2):
+                elif dirs_match(gv_path, av_path, base_dir1, base_dir2):
                     delete_dir(gv_path)
                     symlink(av_path, gv_path)
                     logger.warning(f"[ACTION] Deleted {gv_path} and symlinked to: {av_path}")

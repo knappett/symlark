@@ -57,6 +57,11 @@ def setup_container_dir(basedir, versions, latest=None, arc_links=None):
 
     os.chdir(TOP_DIR)
 
+# Ensure paths passed to main are asbolute paths
+TEST_DATA = os.path.abspath(TEST_DATA)
+TEST_GWS = os.path.abspath(TEST_GWS)
+TEST_ARC = os.path.abspath(TEST_ARC)
+
 def test_top_level_archive_dir_does_not_exist(caplog):
     '''Tests for a non-existent archive directory.'''
     setup_container_dir(TEST_GWS, [])
@@ -199,6 +204,9 @@ def test_newer_gws_than_archive(caplog):
     #import pdb ; pdb.set_trace()
 
 def test_two_archive_versions_only_old_gws_version(caplog):
+    #TEST_ARC = "/home/users/dknappett/symlark/tests/TEST_DATA/test_arc"
+    #TEST_GWS = "/home/users/dknappett/symlark/tests/TEST_DATA/test_gws"
+
     '''Tests for 2 version directories in the archive and 1 (old) version in the GWS.'''
     setup_container_dir(TEST_ARC, ["v20250601", "v20260607"], latest="v20260607")
     setup_container_dir(TEST_GWS, [], latest="v20250601",arc_links={"v20250601": "v20250601"})
@@ -206,9 +214,14 @@ def test_two_archive_versions_only_old_gws_version(caplog):
     caplog.set_level(logging.INFO)
     main(TEST_GWS, TEST_ARC)
 
-    av_dir = f"{TEST_ARC}/v20250601"
     av_dir2 = f"{TEST_ARC}/v20260607"
 
     gv_dir = f"{TEST_GWS}/v20250601"
+    gv_dir2 = f"{TEST_GWS}/v20260607"
 
-    assert caplog.records[0].message == f"GWS symlink already exists: {gv_dir}"
+    assert caplog.records[0].message == "Most recent archive version directory newer than most recent GWS version directory."
+    assert caplog.records[1].message == f"Symlinking {gv_dir2} to: {av_dir2}"
+    assert caplog.records[2].message == f"{gv_dir2} correctly points to: {av_dir2}"
+    assert caplog.records[3].message == f"    Archive latest link points to {os.path.basename(av_dir2)}"
+    assert caplog.records[4].message == f"    GWS latest link points to {os.path.basename(gv_dir)}"
+    assert caplog.records[5].message == f"GWS symlink already exists: {gv_dir}"
