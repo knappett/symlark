@@ -1,0 +1,19 @@
+# Setting up symlark as a command-line script
+
+## Get a Python virtual env installed
+
+```
+ssh sci5
+cd ~/ukcp18/symlark/
+module load jaspy
+python -m venv venv
+source venv/bin/activate
+venv/bin/python setup.py develop
+```
+
+Test with:
+
+```
+symlark src dest
+```
+
