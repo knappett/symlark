@@ -170,12 +170,14 @@ def test_old_gws_version_needs_deleting_and_symlink(caplog):
     gv_dir = f"{TEST_GWS}/v20110101"
     av_dir = f"{TEST_ARC}/v20110101"
 
+    # On first loop iteration the date directories are the same therefore the GWS just symlinks off to the archive dir and the respective latest links point to the same version numbers
     assert caplog.records[0].message == f"{gv_dir2} correctly points to: {av_dir2}"
     assert caplog.records[1].message == f"    Archive latest link points to v20220203"
     assert caplog.records[2].message == f"    GWS latest link points to v20220203"
-    assert caplog.records[3].message == f"Deleting files in: {gv_dir}"
-    assert caplog.records[4].message == f"Deleting directory: {gv_dir}"
-    assert caplog.records[5].message == f"Symlinking {gv_dir} to: {av_dir}"
+    assert caplog.records[3].message == f"Symlinking latest to: {gv_dir2}"
+    # On the second loop iteration, the old version in the GWS is deleted rather than symlinked
+    assert caplog.records[4].message == f"Deleting files in: {gv_dir}"
+    assert caplog.records[5].message == f"Deleting directory: {gv_dir}"
     assert caplog.records[6].message == f"[ACTION] Deleted old version in GWS: {gv_dir}"
     
     
@@ -224,4 +226,4 @@ def test_two_archive_versions_only_old_gws_version(caplog):
     assert caplog.records[2].message == f"{gv_dir2} correctly points to: {av_dir2}"
     assert caplog.records[3].message == f"    Archive latest link points to {os.path.basename(av_dir2)}"
     assert caplog.records[4].message == f"    GWS latest link points to {os.path.basename(gv_dir)}"
-    assert caplog.records[5].message == f"GWS symlink already exists: {gv_dir}"
+    assert caplog.records[5].message == f"Symlinking latest to: {gv_dir2}"
