@@ -14,7 +14,7 @@ import logging
 # Set up module-level logger
 logging.basicConfig()
 logger = logging.getLogger(__name__)
-
+logger.setLevel(logging.DEBUG)
 
 def nested_list(d: str, remove_base=False) -> list:
     r = []
@@ -68,9 +68,16 @@ def delete_dir(dr):
     os.rmdir(dr)
 
 
-def symlink(target, symlink):
+def symlink(target, symlink, relative=False):
     logger.warning(f"Symlinking {symlink} to: {target}")
-    os.symlink(target, symlink) 
+
+    if relative:
+        cwd = os.getcwd()
+        os.chdir(os.path.dirname(target))
+        os.symlink(os.path.basename(target), symlink)
+        os.chdir(cwd)
+    else:
+        os.symlink(target,symlink)
 
 
 def md5(f: str, blocksize: int=65536) -> str:
@@ -135,6 +142,7 @@ class ArchiveDir:
 
 
 def main(base_dir1: str, base_dir2: str) -> None:
+    #import pdb ; pdb.set_trace()
 
     for dr in (base_dir1, base_dir2):
         if not os.path.isdir(dr):
@@ -178,14 +186,15 @@ def main(base_dir1: str, base_dir2: str) -> None:
             gv_path, av_path = [os.path.join(bdir, gws_version) for bdir in (gws_dir.dr, arc_dir.dr)]
             logger.debug(f"[INFO] Working on: {gv_path}")
             logger.debug(f"              and: {av_path}")
+            #import pdb ; pdb.set_trace()
 
             # If the GWS version is older than the latest archive version: delete the GWS version
             if gws_version < arc_dir.latest:
                 if os.path.islink(gv_path):
-                    logger.warning(f"GWS symlink already exists: {gv_path}")
+                    os.remove(gv_path)
+                    logger.warning(f"[ACTION] Deleted symlink to older version: {gv_path}")
                 else:
                     delete_dir(gv_path)
-                    symlink(av_path, gv_path)
                     logger.warning(f"[ACTION] Deleted old version in GWS: {gv_path}")
             
             # If they are the same:
@@ -205,8 +214,10 @@ def main(base_dir1: str, base_dir2: str) -> None:
                 gws_latest_link=Path(gws_dir.dr + '/latest')
                 if os.path.exists(gws_latest_link):
                     logger.warning(f"    GWS latest link points to {gws_latest_link.readlink()}")
+                    os.remove(gws_latest_link.as_posix())
                 else:
-                    logger.warning(f"    No latest link exists for {gv_path}")                
+                    logger.warning(f"    No latest link exists for {gv_path}")
+                symlink(gv_path,'latest',relative=True)                
 
             # If the GWS version is newer: then maybe this is ready for ingestion, or needs attention
             else:
