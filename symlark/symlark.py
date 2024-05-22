@@ -16,6 +16,7 @@ logging.basicConfig()
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
+
 def nested_list(d: str, remove_base=False) -> list:
     r = []
     for i in os.listdir(d):
@@ -40,12 +41,15 @@ def dirs_match(d1: str, d2: str, basedir1: str, basedir2: str) -> bool:
         logger.error(f"Dirs have different listed contents: {d1} vs {d2}")
         return
 
-    for i in d1:
-        i1 = os.path.join(d1, i)
-        i2 = os.path.join(d2, i)
+    for i in l1:
+        i1 = os.path.join(d1, i.lstrip("/"))
+        i2 = os.path.join(d2, i.lstrip("/"))
+        logger.debug(f"Comparing at file level: {i}")
 
         if os.path.isfile(i1):
+            print(f"Comparing files: {i1} AND {i2}")
             s1, s2 = [size(item) for item in (i1, i2)]
+
             if s1 != s2:
                 logger.error(f"Files differ in size: {i1} = {s1} vs {i2} = {s2}")
                 errs += 1
@@ -82,6 +86,7 @@ def symlink(target, symlink, relative=False):
 
 def md5(f: str, blocksize: int=65536) -> str:
     hash = hashlib.md5()
+    logger.debug(f"Calculating MD5 for: {f}")
 
     with open(f, "rb") as f:
         for block in iter(lambda: f.read(blocksize), b""):
@@ -204,6 +209,7 @@ def main(base_dir1: str, base_dir2: str) -> None:
                 if Path(gv_path).is_symlink(): #and Path(gv_path).readlink().as_posix().endswith(av_path):
                     logger.info(f"{gv_path} correctly points to: {av_path}")
                 elif dirs_match(gv_path, av_path, base_dir1, base_dir2):
+                    logger.info(f"Found matching directories, so deleting and symlinking.")
                     delete_dir(gv_path)
                     symlink(av_path, gv_path)
                     logger.warning(f"[ACTION] Deleted {gv_path} and symlinked to: {av_path}")
