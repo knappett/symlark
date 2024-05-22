@@ -147,7 +147,6 @@ class ArchiveDir:
 
 
 def main(base_dir1: str, base_dir2: str) -> None:
-    #import pdb ; pdb.set_trace()
 
     for dr in (base_dir1, base_dir2):
         if not os.path.isdir(dr):
@@ -191,7 +190,6 @@ def main(base_dir1: str, base_dir2: str) -> None:
             gv_path, av_path = [os.path.join(bdir, gws_version) for bdir in (gws_dir.dr, arc_dir.dr)]
             logger.debug(f"[INFO] Working on: {gv_path}")
             logger.debug(f"              and: {av_path}")
-            #import pdb ; pdb.set_trace()
 
             # If the GWS version is older than the latest archive version: delete the GWS version
             if gws_version < arc_dir.latest:
