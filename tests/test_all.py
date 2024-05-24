@@ -148,10 +148,18 @@ def test_single_version_needs_deleting_and_symlink(caplog):
     gv_dir = f"{TEST_GWS}/v20220203"
     av_dir = f"{TEST_ARC}/v20220203"
 
-    assert caplog.records[0].message == f"Deleting files in: {gv_dir}"
-    assert caplog.records[1].message == f"Deleting directory: {gv_dir}"
-    assert caplog.records[2].message == f"Symlinking {gv_dir} to: {av_dir}"
-    assert caplog.records[3].message == f"[ACTION] Deleted {gv_dir} and symlinked to: {av_dir}"
+    expected_messages = ["Found matching directories, so deleting and symlinking.", 
+                         f"Deleting files in: {gv_dir}", 
+                         f"Deleting directory: {gv_dir}", 
+                         (f"Symlinking {gv_dir}"
+                          f" to: {av_dir}"), 
+                         (f"[ACTION] Deleted {gv_dir}"
+                          f" and symlinked to: {av_dir}"), 
+                          "    Archive latest link points to v20220203", 
+                          "    GWS latest link points to v20220203", 
+                          f"Symlinking latest to: {gv_dir}"]
+
+    assert [rec.message for rec in caplog.records] == expected_messages
 
 
 def test_old_gws_version_needs_deleting_and_symlink(caplog):
