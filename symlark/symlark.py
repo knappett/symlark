@@ -16,36 +16,42 @@ logging.basicConfig()
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-def nested_list(d: str, remove_base=False) -> list:
-    r = []
-    for i in os.listdir(d):
 
+def nested_list(d: str, remove_base=False) -> list:
+    paths = []
+
+    for i in os.listdir(d):
         pth = os.path.join(d, i)
+
         if os.path.isdir(pth):
-            r.extend(nested_list(pth))
+            paths.extend(nested_list(pth, remove_base=pth))
         else:
             if remove_base:
-                pth = pth.replace(remove_base, "")
-            r.append(pth)
+                pth = pth.replace(remove_base, "").lstrip("/")
 
-    return sorted(r)
+            paths.append(pth)
+
+    return sorted(paths)
 
 
 def dirs_match(d1: str, d2: str, basedir1: str, basedir2: str) -> bool:
     errs = 0
-    l1 = nested_list(d1, remove_base=basedir1)
-    l2 = nested_list(d2, remove_base=basedir2)
+    l1 = nested_list(d1, remove_base=d1)
+    l2 = nested_list(d2, remove_base=d2)
+
 
     if l1 != l2:
         logger.error(f"Dirs have different listed contents: {d1} vs {d2}")
         return
 
-    for i in d1:
+    for i in l1:
         i1 = os.path.join(d1, i)
         i2 = os.path.join(d2, i)
+        logger.debug(f"Comparing file in source and target dirs: {i}")
 
-        if os.path.isfile(i1):
+        if os.path.isfile(i1) or os.path.islink(i1):
             s1, s2 = [size(item) for item in (i1, i2)]
+
             if s1 != s2:
                 logger.error(f"Files differ in size: {i1} = {s1} vs {i2} = {s2}")
                 errs += 1
@@ -82,6 +88,7 @@ def symlink(target, symlink, relative=False):
 
 def md5(f: str, blocksize: int=65536) -> str:
     hash = hashlib.md5()
+    logger.debug(f"Calculating MD5 checksum for: {f}")
 
     with open(f, "rb") as f:
         for block in iter(lambda: f.read(blocksize), b""):
@@ -142,7 +149,6 @@ class ArchiveDir:
 
 
 def main(base_dir1: str, base_dir2: str) -> None:
-    #import pdb ; pdb.set_trace()
 
     for dr in (base_dir1, base_dir2):
         if not os.path.isdir(dr):
@@ -186,7 +192,6 @@ def main(base_dir1: str, base_dir2: str) -> None:
             gv_path, av_path = [os.path.join(bdir, gws_version) for bdir in (gws_dir.dr, arc_dir.dr)]
             logger.debug(f"[INFO] Working on: {gv_path}")
             logger.debug(f"              and: {av_path}")
-            #import pdb ; pdb.set_trace()
 
             # If the GWS version is older than the latest archive version: delete the GWS version
             if gws_version < arc_dir.latest:
@@ -204,6 +209,7 @@ def main(base_dir1: str, base_dir2: str) -> None:
                 if Path(gv_path).is_symlink(): #and Path(gv_path).readlink().as_posix().endswith(av_path):
                     logger.info(f"{gv_path} correctly points to: {av_path}")
                 elif dirs_match(gv_path, av_path, base_dir1, base_dir2):
+                    logger.info(f"Found matching directories, so deleting and symlinking.")
                     delete_dir(gv_path)
                     symlink(av_path, gv_path)
                     logger.warning(f"[ACTION] Deleted {gv_path} and symlinked to: {av_path}")
